@@ -17,6 +17,8 @@ public class RefundService {
  private final RefundRepository refunds; private final BookingRepository bookings; private final PaymentRepository payments; private final AuditService audit; private final NotificationService notifications; private final CancellationPolicyService cancellationPolicies; private final BookingTransitionService transitions;
  public RefundService(RefundRepository refunds,BookingRepository bookings,PaymentRepository payments,AuditService audit,NotificationService notifications,CancellationPolicyService cancellationPolicies,BookingTransitionService transitions){this.refunds=refunds;this.bookings=bookings;this.payments=payments;this.audit=audit;this.notifications=notifications;this.cancellationPolicies=cancellationPolicies;this.transitions=transitions;}
 
+ public CancellationPolicyService.Decision quote(Long userId,Long bookingId){Booking b=bookings.findById(bookingId).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND,"Booking not found"));if(!b.getUserId().equals(userId))throw new ResponseStatusException(HttpStatus.FORBIDDEN,"Not your booking");if(!"PAID".equalsIgnoreCase(b.getStatus()))throw new ResponseStatusException(HttpStatus.CONFLICT,"Only paid bookings can be quoted for refund");Payment p=payments.findByBookingId(bookingId).orElseThrow(()->new ResponseStatusException(HttpStatus.CONFLICT,"Payment record not found"));return cancellationPolicies.quote(b,p.getAmount());}
+
  @Transactional
  public Refund request(Long userId,Long bookingId,String reason){
   Booking b=bookings.findById(bookingId).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND,"Booking not found"));
