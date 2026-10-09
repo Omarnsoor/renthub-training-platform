@@ -4,6 +4,7 @@ import{BrowserRouter}from'react-router-dom';
 import App from'./App';
 import EnterpriseWorkspace from'./enterprise/EnterpriseWorkspace';
 import LiveWorkspaceDock from'./experience/LiveWorkspaceDock';
+import OperationsPulse from'./experience/OperationsPulse';
 import{get,session}from'./api/client';
 import'./styles/app.css';
 import'./styles/enterprise.css';
@@ -41,7 +42,7 @@ function Root(){
   },[]);
   if(operations){
     if(!ready)return <div className="appLoading">Loading RentHub operations…</div>;
-    return <><AuthFeedback state={feedback}/><div className="opsStandaloneHeader"><a className="brand" href="/">Rent<span>Hub</span></a><a className="opsBack" href="/">← Back to marketplace</a></div><EnterpriseWorkspace user={user}/></>;
+    return <><AuthFeedback state={feedback}/><div className="opsStandaloneHeader"><a className="brand" href="/">Rent<span>Hub</span></a><a className="opsBack" href="/">← Back to marketplace</a></div><OperationsPulse user={user}/><EnterpriseWorkspace user={user}/></>;
   }
   return <><AuthFeedback state={feedback}/><App key={authTick}/><LiveWorkspaceDock user={user}/></>;
 }
