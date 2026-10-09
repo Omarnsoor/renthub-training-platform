@@ -1,6 +1,7 @@
 package com.renthub.booking;
 
 import com.renthub.audit.AuditService;
+import com.renthub.document.DocumentEligibilityService;
 import com.renthub.notification.NotificationService;
 import com.renthub.payout.PayoutService;
 import com.renthub.user.User;
@@ -13,14 +14,15 @@ import java.util.*;
 
 @Service
 public class BookingLifecycleService {
- private final BookingRepository bookings; private final BookingHistoryRepository history; private final AuditService audit; private final NotificationService notifications; private final PayoutService payouts; private final BookingTransitionService transitions;
- public BookingLifecycleService(BookingRepository bookings,BookingHistoryRepository history,AuditService audit,NotificationService notifications,PayoutService payouts,BookingTransitionService transitions){this.bookings=bookings;this.history=history;this.audit=audit;this.notifications=notifications;this.payouts=payouts;this.transitions=transitions;}
+ private final BookingRepository bookings; private final BookingHistoryRepository history; private final AuditService audit; private final NotificationService notifications; private final PayoutService payouts; private final BookingTransitionService transitions; private final DocumentEligibilityService documents;
+ public BookingLifecycleService(BookingRepository bookings,BookingHistoryRepository history,AuditService audit,NotificationService notifications,PayoutService payouts,BookingTransitionService transitions,DocumentEligibilityService documents){this.bookings=bookings;this.history=history;this.audit=audit;this.notifications=notifications;this.payouts=payouts;this.transitions=transitions;this.documents=documents;}
 
  @Transactional
  public Booking checkIn(User user,Long id){
   Booking b=owned(user,id);if(!"PAID".equalsIgnoreCase(b.getStatus()))throw new ResponseStatusException(HttpStatus.CONFLICT,"Only paid bookings can check in");
   LocalDate today=LocalDate.now();if(today.isBefore(b.getStartDate()))throw new ResponseStatusException(HttpStatus.CONFLICT,"Check-in is not open yet");if(!today.isBefore(b.getEndDate()))throw new ResponseStatusException(HttpStatus.CONFLICT,"Booking has already ended");
   if("CHECKED_IN".equalsIgnoreCase(b.getCheckinStatus()))return b;
+  documents.assertCheckInEligible(b.getUserId(),b.getAssetType());
   String oldCheckin=b.getCheckinStatus();b.setCheckinStatus("CHECKED_IN");bookings.save(b);audit.record(user.getId(),"BOOKING_CHECKED_IN","BOOKING",id,oldCheckin,"CHECKED_IN");notifications.send(user.getId(),"BOOKING","Checked in","Booking #"+id+" is checked in","BOOKING",id);return b;
  }
 
