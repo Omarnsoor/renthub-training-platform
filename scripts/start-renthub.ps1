@@ -43,10 +43,16 @@ if (!(Test-Port 8080)) {
   $backend.Id | Set-Content (Join-Path $runtime 'backend.pid')
 } else { Write-Host 'Backend already running on 8080.' }
 
-if (!(Get-Command npm.cmd -ErrorAction SilentlyContinue)) { throw 'Node.js/npm is required. Install Node.js LTS once, then run Start-RentHub.cmd again.' }
+if (!(Get-Command npm.cmd -ErrorAction SilentlyContinue)) { throw 'Node.js/npm is required. Install Node.js LTS once, then run this launcher again.' }
+$frontendDir = Join-Path $root 'frontend'
+if (!(Test-Path (Join-Path $frontendDir 'node_modules'))) {
+  Write-Host 'Installing frontend dependencies once...'
+  $npmInstall = Start-Process -FilePath 'npm.cmd' -ArgumentList 'install' -WorkingDirectory $frontendDir -Wait -PassThru
+  if ($npmInstall.ExitCode -ne 0) { throw 'npm install failed.' }
+}
 if (!(Test-Port 5173)) {
   Write-Host 'Starting RentHub frontend on http://localhost:5173 ...'
-  $frontend = Start-Process -FilePath 'npm.cmd' -ArgumentList 'run','dev','--','--host','127.0.0.1' -WorkingDirectory (Join-Path $root 'frontend') -RedirectStandardOutput (Join-Path $runtime 'frontend.log') -RedirectStandardError (Join-Path $runtime 'frontend-error.log') -PassThru -WindowStyle Hidden
+  $frontend = Start-Process -FilePath 'npm.cmd' -ArgumentList 'run','dev','--','--host','127.0.0.1' -WorkingDirectory $frontendDir -RedirectStandardOutput (Join-Path $runtime 'frontend.log') -RedirectStandardError (Join-Path $runtime 'frontend-error.log') -PassThru -WindowStyle Hidden
   $frontend.Id | Set-Content (Join-Path $runtime 'frontend.pid')
 } else { Write-Host 'Frontend already running on 5173.' }
 
