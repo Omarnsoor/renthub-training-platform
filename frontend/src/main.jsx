@@ -9,6 +9,7 @@ import{get,session}from'./api/client';
 import'./styles/app.css';
 import'./styles/enterprise.css';
 import'./styles/live-experience.css';
+import'./styles/operations-pulse.css';
 
 function AuthFeedback({state}){
   if(!state)return null;
