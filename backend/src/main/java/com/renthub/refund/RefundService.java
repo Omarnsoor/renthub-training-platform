@@ -4,6 +4,7 @@ import com.renthub.audit.AuditService;
 import com.renthub.booking.*;
 import com.renthub.notification.NotificationService;
 import com.renthub.payment.*;
+import com.renthub.payout.PayoutGuardService;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,8 +15,8 @@ import java.util.List;
 
 @Service
 public class RefundService {
- private final RefundRepository refunds; private final BookingRepository bookings; private final PaymentRepository payments; private final AuditService audit; private final NotificationService notifications; private final CancellationPolicyService cancellationPolicies; private final BookingTransitionService transitions;
- public RefundService(RefundRepository refunds,BookingRepository bookings,PaymentRepository payments,AuditService audit,NotificationService notifications,CancellationPolicyService cancellationPolicies,BookingTransitionService transitions){this.refunds=refunds;this.bookings=bookings;this.payments=payments;this.audit=audit;this.notifications=notifications;this.cancellationPolicies=cancellationPolicies;this.transitions=transitions;}
+ private final RefundRepository refunds; private final BookingRepository bookings; private final PaymentRepository payments; private final AuditService audit; private final NotificationService notifications; private final CancellationPolicyService cancellationPolicies; private final BookingTransitionService transitions; private final PayoutGuardService payouts;
+ public RefundService(RefundRepository refunds,BookingRepository bookings,PaymentRepository payments,AuditService audit,NotificationService notifications,CancellationPolicyService cancellationPolicies,BookingTransitionService transitions,PayoutGuardService payouts){this.refunds=refunds;this.bookings=bookings;this.payments=payments;this.audit=audit;this.notifications=notifications;this.cancellationPolicies=cancellationPolicies;this.transitions=transitions;this.payouts=payouts;}
 
  public CancellationPolicyService.Decision quote(Long userId,Long bookingId){Booking b=bookings.findById(bookingId).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND,"Booking not found"));if(!b.getUserId().equals(userId))throw new ResponseStatusException(HttpStatus.FORBIDDEN,"Not your booking");if(!"PAID".equalsIgnoreCase(b.getStatus()))throw new ResponseStatusException(HttpStatus.CONFLICT,"Only paid bookings can be quoted for refund");Payment p=payments.findByBookingId(bookingId).orElseThrow(()->new ResponseStatusException(HttpStatus.CONFLICT,"Payment record not found"));return cancellationPolicies.quote(b,p.getAmount());}
 
@@ -29,7 +30,7 @@ public class RefundService {
   CancellationPolicyService.Decision decision=cancellationPolicies.quote(b,p.getAmount());
   BigDecimal fee=decision.feeAmount();
   Refund r=new Refund();r.setBookingId(bookingId);r.setUserId(userId);r.setPaymentId(p.getId());r.setRequestedAmount(decision.refundableAmount());r.setFeeAmount(fee);r.setReason(reason);r=refunds.save(r);
-  b.setCancellationFee(fee);b=transitions.transition(b,userId,"REFUND_PENDING","Refund requested under policy "+decision.policyCode());
+  b.setCancellationFee(fee);b=transitions.transition(b,userId,"REFUND_PENDING","Refund requested under policy "+decision.policyCode());payouts.hold(bookingId,userId,"Refund #"+r.getId()+" requested");
   audit.record(userId,"REFUND_REQUESTED","REFUND",r.getId(),null,"booking="+bookingId+", policy="+decision.policyCode()+", fee="+fee);
   notifications.send(userId,"REFUND","Refund requested","Refund request #"+r.getId()+" is under review","REFUND",r.getId());
   return r;
@@ -42,7 +43,7 @@ public class RefundService {
   if(approve){BigDecimal max=r.getRequestedAmount();BigDecimal amount=approvedAmount==null?max:approvedAmount;if(amount.signum()<0||amount.compareTo(max)>0)throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Approved amount is outside the allowed range");r.setApprovedAmount(amount);r.setStatus("APPROVED");}
   else{r.setApprovedAmount(BigDecimal.ZERO);r.setStatus("REJECTED");}
   r.setReviewNote(note);r.setResolvedAt(LocalDateTime.now());r=refunds.save(r);
-  Booking b=bookings.findById(r.getBookingId()).orElseThrow();transitions.transition(b,adminId,approve?"REFUND_APPROVED":"PAID",approve?"Refund approved":"Refund rejected");
+  Booking b=bookings.findById(r.getBookingId()).orElseThrow();transitions.transition(b,adminId,approve?"REFUND_APPROVED":"PAID",approve?"Refund approved":"Refund rejected");if(!approve)payouts.releaseIfClear(r.getBookingId(),adminId,"Refund #"+refundId+" rejected");
   audit.record(adminId,approve?"REFUND_APPROVED":"REFUND_REJECTED","REFUND",r.getId(),"REQUESTED",r.getStatus());
   notifications.send(r.getUserId(),"REFUND",approve?"Refund approved":"Refund rejected",approve?"Approved amount: "+r.getApprovedAmount():(note==null?"Refund request was rejected":note),"REFUND",r.getId());
   return r;
@@ -53,7 +54,7 @@ public class RefundService {
   Refund r=refunds.findById(refundId).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND,"Refund not found"));
   if(!"APPROVED".equals(r.getStatus()))throw new ResponseStatusException(HttpStatus.CONFLICT,"Refund must be approved first");
   r.setStatus("PAID");r.setResolvedAt(LocalDateTime.now());refunds.save(r);
-  Booking b=bookings.findById(r.getBookingId()).orElseThrow();transitions.transition(b,adminId,"REFUNDED","Refund payment completed");
+  Booking b=bookings.findById(r.getBookingId()).orElseThrow();transitions.transition(b,adminId,"REFUNDED","Refund payment completed");payouts.hold(r.getBookingId(),adminId,"Refund #"+refundId+" paid; owner settlement requires review");
   audit.record(adminId,"REFUND_PAID","REFUND",r.getId(),"APPROVED","PAID");
   notifications.send(r.getUserId(),"REFUND","Refund completed","Your refund of "+r.getApprovedAmount()+" has been completed","REFUND",r.getId());
   return r;
