@@ -11,42 +11,41 @@ function Test-Port([int]$Port) {
 # Cache real demo photography on first run. Failures are harmless because the UI has online fallbacks.
 try { & (Join-Path $PSScriptRoot 'download-media.ps1') } catch { Write-Warning $_.Exception.Message }
 
-# Local DB configuration. Password is stored DPAPI-encrypted for this Windows user only.
+# Local DB configuration.
 $configPath = Join-Path $root '.renthub-local.json'
-$secretPath = Join-Path $root '.renthub-db-secret'
+$credentialPath = Join-Path $root '.renthub-db-credential.xml'
+$legacySecretPath = Join-Path $root '.renthub-db-secret'
 if (!(Test-Path $configPath)) {
   @{ dbUrl='jdbc:oracle:thin:@localhost:1521/XEPDB1'; dbUser='RENTHUB' } | ConvertTo-Json | Set-Content $configPath -Encoding UTF8
 }
 $config = Get-Content $configPath -Raw | ConvertFrom-Json
 
-function Save-RentHubSecret {
+# Remove the older secret-file format if present; this version uses Export-Clixml/Import-Clixml,
+# which is DPAPI-protected for the current Windows user and works reliably on Windows PowerShell 5.1.
+if (Test-Path $legacySecretPath) { Remove-Item $legacySecretPath -Force -ErrorAction SilentlyContinue }
+
+function Save-RentHubCredential {
   Write-Host 'First local launch: enter the RENTHUB Oracle password. It will be encrypted for your Windows account.'
   $secure = Read-Host 'Database password' -AsSecureString
-  $encrypted = $secure | ConvertFrom-SecureString
-  [System.IO.File]::WriteAllText($secretPath, $encrypted, [System.Text.Encoding]::ASCII)
+  $credential = New-Object System.Management.Automation.PSCredential($config.dbUser, $secure)
+  $credential | Export-Clixml -Path $credentialPath
 }
 
-if (!(Test-Path $secretPath)) { Save-RentHubSecret }
+if (!(Test-Path $credentialPath)) { Save-RentHubCredential }
 
 try {
-  $encryptedSecret = ([System.IO.File]::ReadAllText($secretPath, [System.Text.Encoding]::ASCII)).Trim()
-  if ([string]::IsNullOrWhiteSpace($encryptedSecret)) { throw 'Secret file is empty.' }
-  $securePassword = $encryptedSecret | ConvertTo-SecureString
+  $credential = Import-Clixml -Path $credentialPath
+  if ($null -eq $credential -or $credential.UserName -ne $config.dbUser) { throw 'Credential file is invalid.' }
 } catch {
-  Write-Warning 'The saved RentHub database password could not be read. Recreating the local encrypted secret.'
-  Remove-Item $secretPath -Force -ErrorAction SilentlyContinue
-  Save-RentHubSecret
-  $encryptedSecret = ([System.IO.File]::ReadAllText($secretPath, [System.Text.Encoding]::ASCII)).Trim()
-  $securePassword = $encryptedSecret | ConvertTo-SecureString
+  Write-Warning 'The saved RentHub database credential could not be read. Recreating it.'
+  Remove-Item $credentialPath -Force -ErrorAction SilentlyContinue
+  Save-RentHubCredential
+  $credential = Import-Clixml -Path $credentialPath
 }
-
-$ptr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($securePassword)
-try { $plainPassword = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($ptr) }
-finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ptr) }
 
 $env:RENTHUB_DB_URL = $config.dbUrl
 $env:RENTHUB_DB_USER = $config.dbUser
-$env:RENTHUB_DB_PASSWORD = $plainPassword
+$env:RENTHUB_DB_PASSWORD = $credential.GetNetworkCredential().Password
 
 if (!(Test-Port 8080)) {
   $maven = Get-Command mvn.cmd -ErrorAction SilentlyContinue
