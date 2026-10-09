@@ -22,7 +22,7 @@ public class CarController {
 
   @GetMapping
   public List<Car> all() {
-    return repo.findAll().stream().filter(c -> !"INACTIVE".equalsIgnoreCase(c.getStatus())).toList();
+    return repo.findAll().stream().filter(c -> "AVAILABLE".equalsIgnoreCase(c.getStatus())).toList();
   }
 
   @GetMapping("/mine")
@@ -36,7 +36,7 @@ public class CarController {
   @GetMapping("/{id}")
   public Car one(@PathVariable Long id) {
     Car car = repo.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Car not found"));
-    if ("INACTIVE".equalsIgnoreCase(car.getStatus())) {
+    if (!"AVAILABLE".equalsIgnoreCase(car.getStatus())) {
       throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Car not found");
     }
     return car;
