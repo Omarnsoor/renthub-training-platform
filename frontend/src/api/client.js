@@ -1,4 +1,40 @@
 const API='http://localhost:8080/api';
-export const session={get token(){return localStorage.getItem('renthub_token')||''},set(token){token?localStorage.setItem('renthub_token',token):localStorage.removeItem('renthub_token')}};
-async function request(path,options={}){const token=session.token;const response=await fetch(`${API}${path}`,{...options,headers:{'Content-Type':'application/json',...(token?{Authorization:`Bearer ${token}`}:{ }),(options.headers||{})}});const text=await response.text();let data=null;if(text){try{data=JSON.parse(text)}catch{data=text}}if(!response.ok){const message=(data&&typeof data==='object'&&(data.detail||data.message||data.error))||`Request failed (${response.status})`;throw new Error(message)}return data}
-export const get=path=>request(path);export const post=(path,body)=>request(path,{method:'POST',body:body===undefined?undefined:JSON.stringify(body)});export const patch=(path,body)=>request(path,{method:'PATCH',body:body===undefined?undefined:JSON.stringify(body)});export const del=path=>request(path,{method:'DELETE'});
+
+export const session={
+  get token(){
+    return localStorage.getItem('renthub_token')||'';
+  },
+  set(token){
+    token?localStorage.setItem('renthub_token',token):localStorage.removeItem('renthub_token');
+  }
+};
+
+async function request(path,options={}){
+  const token=session.token;
+  const response=await fetch(`${API}${path}`,{
+    ...options,
+    headers:{
+      'Content-Type':'application/json',
+      ...(token?{Authorization:`Bearer ${token}`} : {}),
+      ...(options.headers||{})
+    }
+  });
+
+  const text=await response.text();
+  let data=null;
+  if(text){
+    try{data=JSON.parse(text)}catch{data=text}
+  }
+
+  if(!response.ok){
+    const message=(data&&typeof data==='object'&&(data.detail||data.message||data.error))||`Request failed (${response.status})`;
+    throw new Error(message);
+  }
+
+  return data;
+}
+
+export const get=path=>request(path);
+export const post=(path,body)=>request(path,{method:'POST',body:body===undefined?undefined:JSON.stringify(body)});
+export const patch=(path,body)=>request(path,{method:'PATCH',body:body===undefined?undefined:JSON.stringify(body)});
+export const del=path=>request(path,{method:'DELETE'});
