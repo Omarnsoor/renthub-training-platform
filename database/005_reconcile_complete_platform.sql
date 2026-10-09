@@ -21,7 +21,18 @@ DECLARE
   PROCEDURE ensure_constraint(p_name VARCHAR2, p_sql VARCHAR2) IS
   BEGIN
     SELECT COUNT(*) INTO n FROM user_constraints WHERE constraint_name = UPPER(p_name);
-    IF n = 0 THEN EXECUTE IMMEDIATE p_sql; END IF;
+    IF n = 0 THEN
+      BEGIN
+        EXECUTE IMMEDIATE p_sql;
+      EXCEPTION
+        WHEN OTHERS THEN
+          -- A previous partial migration may already have created the same logical
+          -- UNIQUE / FK constraint under an Oracle-generated SYS_* name.
+          -- ORA-02261 = such unique or primary key already exists in the table
+          -- ORA-02275 = such a referential constraint already exists in the table
+          IF SQLCODE NOT IN (-2261, -2275) THEN RAISE; END IF;
+      END;
+    END IF;
   END;
 BEGIN
   ensure_sequence('RH_AUTH_SESSION_SEQ');
