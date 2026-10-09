@@ -1,0 +1,28 @@
+package com.renthub.car;
+import jakarta.persistence.*;
+import java.math.BigDecimal;
+@Entity @Table(name="RH_CARS")
+public class Car {
+  @Id @GeneratedValue(strategy=GenerationType.SEQUENCE,generator="car_seq")
+  @SequenceGenerator(name="car_seq",sequenceName="RH_CAR_SEQ",allocationSize=1)
+  private Long id;
+  @Column(nullable=false,length=80) private String make;
+  @Column(nullable=false,length=80) private String model;
+  @Column(nullable=false) private Integer modelYear;
+  @Column(nullable=false,length=40) private String transmission;
+  @Column(nullable=false) private Integer seats;
+  @Column(nullable=false,precision=12,scale=2) private BigDecimal dailyRate;
+  @Column(nullable=false,length=120) private String city;
+  @Column(length=500) private String imageUrl;
+  @Column(nullable=false,length=20) private String status="AVAILABLE";
+  public Long getId(){return id;} public void setId(Long v){id=v;}
+  public String getMake(){return make;} public void setMake(String v){make=v;}
+  public String getModel(){return model;} public void setModel(String v){model=v;}
+  public Integer getModelYear(){return modelYear;} public void setModelYear(Integer v){modelYear=v;}
+  public String getTransmission(){return transmission;} public void setTransmission(String v){transmission=v;}
+  public Integer getSeats(){return seats;} public void setSeats(Integer v){seats=v;}
+  public BigDecimal getDailyRate(){return dailyRate;} public void setDailyRate(BigDecimal v){dailyRate=v;}
+  public String getCity(){return city;} public void setCity(String v){city=v;}
+  public String getImageUrl(){return imageUrl;} public void setImageUrl(String v){imageUrl=v;}
+  public String getStatus(){return status;} public void setStatus(String v){status=v;}
+}
