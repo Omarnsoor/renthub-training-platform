@@ -12,7 +12,7 @@ import java.util.List;
 @Service
 public class PayoutGuardService {
   private static final List<String> ACTIVE_DISPUTES = List.of("OPEN","UNDER_REVIEW");
-  private static final List<String> ACTIVE_REFUNDS = List.of("REQUESTED","APPROVED");
+  private static final List<String> PAYOUT_BLOCKING_REFUNDS = List.of("REQUESTED","APPROVED","PAID");
 
   private final OwnerPayoutRepository payouts;
   private final DisputeRepository disputes;
@@ -30,13 +30,13 @@ public class PayoutGuardService {
     boolean disputeHold = disputes.findByBookingIdOrderByCreatedAtDesc(bookingId).stream()
         .anyMatch(d -> ACTIVE_DISPUTES.contains(String.valueOf(d.getStatus()).toUpperCase()));
     boolean refundHold = refunds.findByBookingIdOrderByCreatedAtDesc(bookingId).stream()
-        .anyMatch(r -> ACTIVE_REFUNDS.contains(String.valueOf(r.getStatus()).toUpperCase()));
+        .anyMatch(r -> PAYOUT_BLOCKING_REFUNDS.contains(String.valueOf(r.getStatus()).toUpperCase()));
     return disputeHold || refundHold;
   }
 
   public void assertPayable(OwnerPayout payout) {
     if (hasFinancialHold(payout.getBookingId())) {
-      throw new ResponseStatusException(HttpStatus.CONFLICT, "Payout is blocked by an active dispute or refund");
+      throw new ResponseStatusException(HttpStatus.CONFLICT, "Payout is blocked by a dispute or refund settlement");
     }
     if (!"READY".equalsIgnoreCase(payout.getStatus())) {
       throw new ResponseStatusException(HttpStatus.CONFLICT, "Only READY payouts can be paid");
