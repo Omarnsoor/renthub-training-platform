@@ -6,6 +6,7 @@ import com.renthub.car.Car;
 import com.renthub.car.CarRepository;
 import com.renthub.notification.NotificationService;
 import com.renthub.pricing.PricingService;
+import com.renthub.pricing.PricingSnapshotService;
 import com.renthub.property.Property;
 import com.renthub.property.PropertyRepository;
 import org.springframework.http.HttpStatus;
@@ -21,19 +22,19 @@ import java.util.Map;
 @Service
 public class BookingService {
   private static final List<String> BLOCKING = List.of("PENDING", "CONFIRMED", "PAID", "REFUND_PENDING", "REFUND_APPROVED", "COMPLETED");
-  private final BookingRepository repo; private final CarRepository cars; private final PropertyRepository props; private final PricingService pricing;
+  private final BookingRepository repo; private final CarRepository cars; private final PropertyRepository props; private final PricingService pricing; private final PricingSnapshotService pricingSnapshots;
   private final AuditService audit; private final NotificationService notifications; private final AvailabilityBlockRepository availabilityBlocks; private final BookingTransitionService transitions;
 
-  public BookingService(BookingRepository repo, CarRepository cars, PropertyRepository props, PricingService pricing, AuditService audit, NotificationService notifications, AvailabilityBlockRepository availabilityBlocks, BookingTransitionService transitions) {
-    this.repo=repo;this.cars=cars;this.props=props;this.pricing=pricing;this.audit=audit;this.notifications=notifications;this.availabilityBlocks=availabilityBlocks;this.transitions=transitions;
+  public BookingService(BookingRepository repo, CarRepository cars, PropertyRepository props, PricingService pricing, PricingSnapshotService pricingSnapshots, AuditService audit, NotificationService notifications, AvailabilityBlockRepository availabilityBlocks, BookingTransitionService transitions) {
+    this.repo=repo;this.cars=cars;this.props=props;this.pricing=pricing;this.pricingSnapshots=pricingSnapshots;this.audit=audit;this.notifications=notifications;this.availabilityBlocks=availabilityBlocks;this.transitions=transitions;
   }
 
   public Booking create(Long userId, BookingRequest request) {
     validateDates(request.startDate(), request.endDate()); String type=normalizeType(request.assetType()); ListingPrice lp=listing(type,request.assetId());
     if(!isAvailable(type,request.assetId(),request.startDate(),request.endDate()))throw new ResponseStatusException(HttpStatus.CONFLICT,"This listing is unavailable for the selected dates");
-    long days=ChronoUnit.DAYS.between(request.startDate(),request.endDate()); BigDecimal base=lp.rate().multiply(BigDecimal.valueOf(days)); BigDecimal finalAmount=pricing.price(type,lp.city(),request.startDate(),base).finalAmount();
-    Booking booking=new Booking();booking.setUserId(userId);booking.setAssetType(type);booking.setAssetId(request.assetId());booking.setStartDate(request.startDate());booking.setEndDate(request.endDate());booking.setTotalAmount(finalAmount);booking.setStatus("PENDING");booking.setDepositAmount(type.equals("CAR")?lp.rate().multiply(BigDecimal.valueOf(2)):BigDecimal.ZERO);booking=repo.save(booking);transitions.recordCreated(booking,userId,"Booking created");
-    audit.record(userId,"BOOKING_CREATED","BOOKING",booking.getId(),null,"amount="+finalAmount);notifications.send(userId,"BOOKING","Booking created","Booking #"+booking.getId()+" is waiting for payment","BOOKING",booking.getId());return booking;
+    long days=ChronoUnit.DAYS.between(request.startDate(),request.endDate()); BigDecimal base=lp.rate().multiply(BigDecimal.valueOf(days)); PricingService.PriceResult priced=pricing.price(type,lp.city(),request.startDate(),base); BigDecimal finalAmount=priced.finalAmount();
+    Booking booking=new Booking();booking.setUserId(userId);booking.setAssetType(type);booking.setAssetId(request.assetId());booking.setStartDate(request.startDate());booking.setEndDate(request.endDate());booking.setTotalAmount(finalAmount);booking.setStatus("PENDING");booking.setDepositAmount(type.equals("CAR")?lp.rate().multiply(BigDecimal.valueOf(2)):BigDecimal.ZERO);booking=repo.save(booking);pricingSnapshots.capture(booking.getId(),priced);transitions.recordCreated(booking,userId,"Booking created");
+    audit.record(userId,"BOOKING_CREATED","BOOKING",booking.getId(),null,"base="+base+", amount="+finalAmount+", pricingRules="+priced.adjustments().size());notifications.send(userId,"BOOKING","Booking created","Booking #"+booking.getId()+" is waiting for payment","BOOKING",booking.getId());return booking;
   }
 
   public Map<String,Object> availability(String rawType,Long assetId,LocalDate startDate,LocalDate endDate){
