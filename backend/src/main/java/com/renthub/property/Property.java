@@ -1,28 +1,7 @@
 package com.renthub.property;
-import jakarta.persistence.*;
-import java.math.BigDecimal;
-@Entity @Table(name="RH_PROPERTIES")
-public class Property {
-  @Id @GeneratedValue(strategy=GenerationType.SEQUENCE,generator="prop_seq")
-  @SequenceGenerator(name="prop_seq",sequenceName="RH_PROPERTY_SEQ",allocationSize=1)
-  private Long id;
-  @Column(nullable=false,length=160) private String title;
-  @Column(nullable=false,length=40) private String type;
-  @Column(nullable=false,length=120) private String city;
-  @Column(nullable=false) private Integer bedrooms;
-  @Column(nullable=false) private Integer bathrooms;
-  @Column(nullable=false,precision=12,scale=2) private BigDecimal nightlyRate;
-  @Column(length=1000) private String description;
-  @Column(length=500) private String imageUrl;
-  @Column(nullable=false,length=20) private String status="AVAILABLE";
-  public Long getId(){return id;} public void setId(Long v){id=v;}
-  public String getTitle(){return title;} public void setTitle(String v){title=v;}
-  public String getType(){return type;} public void setType(String v){type=v;}
-  public String getCity(){return city;} public void setCity(String v){city=v;}
-  public Integer getBedrooms(){return bedrooms;} public void setBedrooms(Integer v){bedrooms=v;}
-  public Integer getBathrooms(){return bathrooms;} public void setBathrooms(Integer v){bathrooms=v;}
-  public BigDecimal getNightlyRate(){return nightlyRate;} public void setNightlyRate(BigDecimal v){nightlyRate=v;}
-  public String getDescription(){return description;} public void setDescription(String v){description=v;}
-  public String getImageUrl(){return imageUrl;} public void setImageUrl(String v){imageUrl=v;}
-  public String getStatus(){return status;} public void setStatus(String v){status=v;}
+import jakarta.persistence.*; import java.math.BigDecimal;
+@Entity @Table(name="RH_PROPERTIES") public class Property {
+ @Id @GeneratedValue(strategy=GenerationType.SEQUENCE,generator="prop_seq") @SequenceGenerator(name="prop_seq",sequenceName="RH_PROPERTY_SEQ",allocationSize=1) private Long id;
+ @Column(nullable=false,length=160) private String title; @Column(nullable=false,length=40) private String type; @Column(nullable=false,length=120) private String city; @Column(nullable=false) private Integer bedrooms; @Column(nullable=false) private Integer bathrooms; @Column(nullable=false,precision=12,scale=2) private BigDecimal nightlyRate; @Column(length=1000) private String description; @Column(length=500) private String imageUrl; @Column(nullable=false,length=20) private String status="AVAILABLE"; private Long ownerId;
+ public Long getId(){return id;} public void setId(Long v){id=v;} public String getTitle(){return title;} public void setTitle(String v){title=v;} public String getType(){return type;} public void setType(String v){type=v;} public String getCity(){return city;} public void setCity(String v){city=v;} public Integer getBedrooms(){return bedrooms;} public void setBedrooms(Integer v){bedrooms=v;} public Integer getBathrooms(){return bathrooms;} public void setBathrooms(Integer v){bathrooms=v;} public BigDecimal getNightlyRate(){return nightlyRate;} public void setNightlyRate(BigDecimal v){nightlyRate=v;} public String getDescription(){return description;} public void setDescription(String v){description=v;} public String getImageUrl(){return imageUrl;} public void setImageUrl(String v){imageUrl=v;} public String getStatus(){return status;} public void setStatus(String v){status=v;} public Long getOwnerId(){return ownerId;} public void setOwnerId(Long v){ownerId=v;}
 }
