@@ -1,0 +1,1 @@
+package com.renthub.favorite; import org.springframework.data.jpa.repository.JpaRepository; import java.util.*; public interface FavoriteRepository extends JpaRepository<Favorite,Long>{List<Favorite> findByUserIdOrderByIdDesc(Long userId); Optional<Favorite> findByUserIdAndAssetTypeAndAssetId(Long userId,String type,Long assetId);}

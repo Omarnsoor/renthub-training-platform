@@ -1,79 +1,43 @@
 # RentHub
 
-Local-first rental training platform for cars, properties, bookings, and extra services.
+Local-first rental marketplace and business-flow training platform.
 
-## Current scope (Phase 1 — Business System only)
-- Realistic cars catalog with search, location filter and sorting
-- Realistic properties catalog
-- Real booking flow with overlap validation and server-side pricing
-- User booking history and cancellation
-- Extra services catalog
-- Oracle schema and seed data
-- React frontend
-- Spring Boot backend
-- Real demo photography with local cache + online fallback
-- One-command local runtime launcher and optional Windows autostart
+## Implemented business scope
+- Realistic car, property and service catalogs
+- Register / login / persistent local sessions
+- Customer bookings with date-overlap protection and server-side pricing
+- Favorites and reviews
+- Booking service add-ons
+- Mock card payment and paid booking status
+- Customer booking history and cancellation rules
+- Owner and Admin dashboards
+- Consistent API validation/error responses
+- Oracle persistence and basic backend tests
+- Real demo photography with local cache/fallback
+- One-command launcher and optional Windows autostart
 
-> AI / agents / orchestrators are intentionally **not part of this phase**.
+> AI / agents / orchestrators remain intentionally out of scope for this business-system phase.
 
-## Stack
-- Java 21
-- Spring Boot 4.1.1
-- Oracle Database
-- React 19.3
-- Vite 8
+## Existing local database upgrade
+Run these once in order if your DB already has the original schema:
+1. `database/003_catalog_expansion.sql` (if not already applied)
+2. `database/004_complete_platform.sql`
 
-## Database setup
-For a fresh database run:
-1. `database/001_schema.sql`
-2. `database/002_seed.sql`
+Demo role accounts after migration:
+- Owner: `owner@renthub.local` / `Owner123!`
+- Admin: `admin@renthub.local` / `Admin123!`
+The first successful login replaces the temporary reset marker with a BCrypt password hash.
 
-For the existing RentHub database created before the expanded catalog, also run once:
-3. `database/003_catalog_expansion.sql`
-
-## Easy local startup
-Run from PowerShell:
-
+## Start RentHub
 ```powershell
-powershell -File .\scripts\start-renthub.ps1
+powershell.exe -ExecutionPolicy Bypass -File .\scripts\start-renthub.ps1
+```
+Open `http://localhost:5173`.
+
+## Windows autostart
+```powershell
+powershell.exe -ExecutionPolicy Bypass -File .\scripts\install-autostart.ps1
 ```
 
-On the first run only, RentHub will:
-- ask for the Oracle `RENTHUB` password and store it encrypted with Windows DPAPI for the current user;
-- download a portable Maven copy if Maven is not installed;
-- cache the real demo photography locally;
-- start the Spring Boot backend on port `8080`;
-- start Vite on port `5173`;
-- open `http://localhost:5173`.
-
-Runtime data, secrets, portable tools and downloaded media are local-only and ignored by Git.
-
-### Start automatically with Windows
-After the launcher has been run successfully once:
-
-```powershell
-powershell -File .\scripts\install-autostart.ps1
-```
-
-RentHub will then start silently after Windows sign-in. To remove it:
-
-```powershell
-powershell -File .\scripts\uninstall-autostart.ps1
-```
-
-To stop processes started by the RentHub launcher:
-
-```powershell
-powershell -File .\scripts\stop-renthub.ps1
-```
-
-## Manual startup
-Backend: `cd backend && mvn spring-boot:run`
-
-Frontend: `cd frontend && npm.cmd install && npm.cmd run dev`
-
-## Demo media
-Catalog photography is sourced from Wikimedia Commons under the license terms on the original file pages. The project caches selected demo images locally on first launch; the frontend can fall back to the original Commons image if a local cached file is missing.
-
-## Next implementation slices
-Authentication, favorites, reviews, mock payments, admin/owner dashboards, image upload/storage, service bookings, validation/error model, and automated tests.
+## Database GUI
+Use DBeaver against `localhost:1521/XEPDB1` with the `RENTHUB` schema. Core tables now include RH_USERS, RH_BOOKINGS, RH_FAVORITES, RH_REVIEWS, RH_PAYMENTS, RH_BOOKING_SERVICES, RH_CARS, RH_PROPERTIES and RH_EXTRA_SERVICES.
