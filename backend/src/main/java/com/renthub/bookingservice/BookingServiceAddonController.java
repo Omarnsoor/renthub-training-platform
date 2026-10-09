@@ -5,6 +5,7 @@ import com.renthub.booking.Booking;
 import com.renthub.booking.BookingRepository;
 import com.renthub.service.ExtraService;
 import com.renthub.service.ExtraServiceRepository;
+import com.renthub.service.ServiceApplicabilityPolicy;
 import com.renthub.user.User;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -20,17 +21,20 @@ public class BookingServiceAddonController {
   private final BookingRepository bookings;
   private final ExtraServiceRepository services;
   private final AuthService auth;
+  private final ServiceApplicabilityPolicy applicability;
 
   public BookingServiceAddonController(
       BookingServiceAddonRepository repo,
       BookingRepository bookings,
       ExtraServiceRepository services,
-      AuthService auth
+      AuthService auth,
+      ServiceApplicabilityPolicy applicability
   ) {
     this.repo = repo;
     this.bookings = bookings;
     this.services = services;
     this.auth = auth;
+    this.applicability = applicability;
   }
 
   @GetMapping("/{bookingId}")
@@ -62,6 +66,7 @@ public class BookingServiceAddonController {
     if (!"ACTIVE".equalsIgnoreCase(service.getStatus())) {
       throw new ResponseStatusException(HttpStatus.CONFLICT, "Service is not active");
     }
+    applicability.requireAllowed(service, booking.getAssetType());
     BookingServiceAddon addon = new BookingServiceAddon();
     addon.setBookingId(booking.getId());
     addon.setServiceId(serviceId);

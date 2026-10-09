@@ -12,6 +12,7 @@ public class ExtraService {
   @Column(length=500) private String description;
   @Column(length=500) private String imageUrl;
   @Column(nullable=false,length=20) private String status="ACTIVE";
+  @Column(name="APPLICABLE_TO",nullable=false,length=20) private String applicableTo="BOTH";
   public Long getId(){return id;} public void setId(Long v){id=v;}
   public String getName(){return name;} public void setName(String v){name=v;}
   public String getCategory(){return category;} public void setCategory(String v){category=v;}
@@ -19,4 +20,5 @@ public class ExtraService {
   public String getDescription(){return description;} public void setDescription(String v){description=v;}
   public String getImageUrl(){return imageUrl;} public void setImageUrl(String v){imageUrl=v;}
   public String getStatus(){return status;} public void setStatus(String v){status=v;}
+  public String getApplicableTo(){return applicableTo;} public void setApplicableTo(String v){applicableTo=v;}
 }

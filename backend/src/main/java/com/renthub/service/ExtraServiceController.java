@@ -14,15 +14,20 @@ import java.util.List;
 public class ExtraServiceController {
   private final ExtraServiceRepository repo;
   private final AuthService auth;
+  private final ServiceApplicabilityPolicy applicability;
 
-  public ExtraServiceController(ExtraServiceRepository repo, AuthService auth) {
+  public ExtraServiceController(ExtraServiceRepository repo, AuthService auth, ServiceApplicabilityPolicy applicability) {
     this.repo = repo;
     this.auth = auth;
+    this.applicability = applicability;
   }
 
   @GetMapping
-  public List<ExtraService> all() {
-    return repo.findAll().stream().filter(s -> "ACTIVE".equalsIgnoreCase(s.getStatus())).toList();
+  public List<ExtraService> all(@RequestParam(required=false) String assetType) {
+    return repo.findAll().stream()
+        .filter(s -> "ACTIVE".equalsIgnoreCase(s.getStatus()))
+        .filter(s -> assetType == null || assetType.isBlank() || applicability.allows(s, assetType))
+        .toList();
   }
 
   @GetMapping("/all")
@@ -42,6 +47,7 @@ public class ExtraServiceController {
     validate(service);
     service.setId(null);
     service.setStatus(service.getStatus() == null || service.getStatus().isBlank() ? "ACTIVE" : service.getStatus().toUpperCase());
+    service.setApplicableTo(applicability.normalizeApplicableTo(service.getApplicableTo()));
     return repo.save(service);
   }
 
@@ -61,6 +67,7 @@ public class ExtraServiceController {
     service.setPrice(input.getPrice());
     service.setDescription(input.getDescription());
     service.setImageUrl(input.getImageUrl());
+    service.setApplicableTo(applicability.normalizeApplicableTo(input.getApplicableTo()));
     if (input.getStatus() != null && !input.getStatus().isBlank()) service.setStatus(input.getStatus().toUpperCase());
     return repo.save(service);
   }
@@ -84,5 +91,6 @@ public class ExtraServiceController {
         || service.getPrice() == null || service.getPrice().signum() < 0) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Service name, category and non-negative price are required");
     }
+    applicability.normalizeApplicableTo(service.getApplicableTo());
   }
 }
