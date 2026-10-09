@@ -18,12 +18,28 @@ if (!(Test-Path $configPath)) {
   @{ dbUrl='jdbc:oracle:thin:@localhost:1521/XEPDB1'; dbUser='RENTHUB' } | ConvertTo-Json | Set-Content $configPath -Encoding UTF8
 }
 $config = Get-Content $configPath -Raw | ConvertFrom-Json
-if (!(Test-Path $secretPath)) {
+
+function Save-RentHubSecret {
   Write-Host 'First local launch: enter the RENTHUB Oracle password. It will be encrypted for your Windows account.'
   $secure = Read-Host 'Database password' -AsSecureString
-  $secure | ConvertFrom-SecureString | Set-Content $secretPath -Encoding UTF8
+  $encrypted = $secure | ConvertFrom-SecureString
+  [System.IO.File]::WriteAllText($secretPath, $encrypted, [System.Text.Encoding]::ASCII)
 }
-$securePassword = Get-Content $secretPath -Raw | ConvertTo-SecureString
+
+if (!(Test-Path $secretPath)) { Save-RentHubSecret }
+
+try {
+  $encryptedSecret = ([System.IO.File]::ReadAllText($secretPath, [System.Text.Encoding]::ASCII)).Trim()
+  if ([string]::IsNullOrWhiteSpace($encryptedSecret)) { throw 'Secret file is empty.' }
+  $securePassword = $encryptedSecret | ConvertTo-SecureString
+} catch {
+  Write-Warning 'The saved RentHub database password could not be read. Recreating the local encrypted secret.'
+  Remove-Item $secretPath -Force -ErrorAction SilentlyContinue
+  Save-RentHubSecret
+  $encryptedSecret = ([System.IO.File]::ReadAllText($secretPath, [System.Text.Encoding]::ASCII)).Trim()
+  $securePassword = $encryptedSecret | ConvertTo-SecureString
+}
+
 $ptr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($securePassword)
 try { $plainPassword = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($ptr) }
 finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ptr) }
