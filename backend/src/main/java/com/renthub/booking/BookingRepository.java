@@ -14,5 +14,12 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
       LocalDate newStartDate
   );
 
+  boolean existsByUserIdAndAssetTypeAndAssetIdAndStatusIn(
+      Long userId,
+      String assetType,
+      Long assetId,
+      Collection<String> statuses
+  );
+
   List<Booking> findByUserIdOrderByCreatedAtDesc(Long userId);
 }
