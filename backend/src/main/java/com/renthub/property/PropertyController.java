@@ -22,7 +22,7 @@ public class PropertyController {
 
   @GetMapping
   public List<Property> all() {
-    return repo.findAll().stream().filter(p -> !"INACTIVE".equalsIgnoreCase(p.getStatus())).toList();
+    return repo.findAll().stream().filter(p -> "AVAILABLE".equalsIgnoreCase(p.getStatus())).toList();
   }
 
   @GetMapping("/mine")
@@ -36,7 +36,7 @@ public class PropertyController {
   @GetMapping("/{id}")
   public Property one(@PathVariable Long id) {
     Property property = repo.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Property not found"));
-    if ("INACTIVE".equalsIgnoreCase(property.getStatus())) {
+    if (!"AVAILABLE".equalsIgnoreCase(property.getStatus())) {
       throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Property not found");
     }
     return property;
