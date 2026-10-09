@@ -3,6 +3,12 @@
 backend/target/
 frontend/node_modules/
 frontend/dist/
+frontend/public/assets/real/
 .env
+.env.local
+.renthub-local.json
+.renthub-db-secret
+.runtime/
+.tools/
 *.log
 .DS_Store
