@@ -5,7 +5,10 @@ export const session={
     return localStorage.getItem('renthub_token')||'';
   },
   set(token){
+    const hadToken=Boolean(localStorage.getItem('renthub_token'));
     token?localStorage.setItem('renthub_token',token):localStorage.removeItem('renthub_token');
+    const hasToken=Boolean(token);
+    window.dispatchEvent(new CustomEvent('renthub:auth-change',{detail:{authenticated:hasToken,previouslyAuthenticated:hadToken}}));
   }
 };
 
