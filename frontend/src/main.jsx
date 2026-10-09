@@ -3,9 +3,11 @@ import ReactDOM from'react-dom/client';
 import{BrowserRouter}from'react-router-dom';
 import App from'./App';
 import EnterpriseWorkspace from'./enterprise/EnterpriseWorkspace';
+import LiveWorkspaceDock from'./experience/LiveWorkspaceDock';
 import{get,session}from'./api/client';
 import'./styles/app.css';
 import'./styles/enterprise.css';
+import'./styles/live-experience.css';
 
 function AuthFeedback({state}){
   if(!state)return null;
@@ -41,7 +43,7 @@ function Root(){
     if(!ready)return <div className="appLoading">Loading RentHub operations…</div>;
     return <><AuthFeedback state={feedback}/><div className="opsStandaloneHeader"><a className="brand" href="/">Rent<span>Hub</span></a><a className="opsBack" href="/">← Back to marketplace</a></div><EnterpriseWorkspace user={user}/></>;
   }
-  return <><AuthFeedback state={feedback}/><App key={authTick}/>{session.token&&<a className="opsLauncher" href="/operations">Open Operations</a>}</>;
+  return <><AuthFeedback state={feedback}/><App key={authTick}/><LiveWorkspaceDock user={user}/></>;
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(
